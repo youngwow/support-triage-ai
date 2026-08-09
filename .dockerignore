@@ -1,0 +1,28 @@
+# Keeps the build context small and guarantees that neither .env nor the local
+# .venv symlink can ever end up in a layer.
+
+.git/
+.gitignore
+.dockerignore
+
+# Local environment and caches
+.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Secrets and local state
+.env
+.envrc
+data/
+
+# Not needed to run the service
+.claude/
+tests/
+docker-compose*.yaml
+*.md
+# pyproject.toml declares it as the readme
+!README.md
