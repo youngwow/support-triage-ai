@@ -52,6 +52,12 @@ class StubHRSystem(AbstractHRSystem):
                 grade=1,
                 vacation_balance_days=3,
             ),
+            "193381953": Employee(
+                user_id="193381953",
+                full_name="Никита Бояркин",
+                grade=3,
+                vacation_balance_days=15,
+            ),
         }
 
     async def get_employee(self, user_id: str) -> Optional[Employee]:
