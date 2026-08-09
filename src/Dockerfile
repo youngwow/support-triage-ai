@@ -23,20 +23,32 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONFAULTHANDLER=1 \
     PATH=/opt/venv/bin:$PATH \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    HF_HOME=/home/app/.cache/huggingface
 
-RUN useradd --create-home --uid 10001 app
+# gcc: triton (torch's GPU kernels) JIT-compiles a C stub at runtime.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# The cache dir must exist and belong to uid 10001 BEFORE the named volume is
+# mounted there, so the volume inherits ownership the non-root user can write.
+RUN useradd --create-home --uid 10001 app \
+    && mkdir -p /home/app/.cache/huggingface \
+    && chown -R app:app /home/app
 
 WORKDIR /app
 
 COPY --link --from=builder /opt/venv /opt/venv
 COPY --link src/ /app/src/
+COPY --link data/ /app/data/
 
 USER app
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+# First boot downloads the ~14 GB embedding model into the cache volume.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=600s --retries=5 \
     CMD python -c 'import os,urllib.request as r; r.urlopen("http://127.0.0.1:8000" + os.environ.get("API_PREFIX", "/api/v1") + "/health/ready", timeout=3)'
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

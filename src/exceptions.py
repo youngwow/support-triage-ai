@@ -19,13 +19,6 @@ class EntityNotFoundError(AppError):
     code = "not_found"
 
 
-class EntityAlreadyExistsError(AppError):
-    """An entity with the same identity already exists."""
-
-    status_code = 409
-    code = "already_exists"
-
-
 class InvalidRequestError(AppError):
     """The request is well-formed but violates a business rule."""
 
@@ -38,3 +31,24 @@ class RepositoryUnavailableError(AppError):
 
     status_code = 503
     code = "repository_unavailable"
+
+
+class LLMUnavailableError(AppError):
+    """The LLM provider did not answer after all retries."""
+
+    status_code = 503
+    code = "llm_unavailable"
+
+
+class WebhookForbiddenError(AppError):
+    """The webhook secret token does not match."""
+
+    status_code = 403
+    code = "webhook_forbidden"
+
+
+class BotNotConfiguredError(AppError):
+    """The Telegram bot token is not configured."""
+
+    status_code = 503
+    code = "telegram_not_configured"

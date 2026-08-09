@@ -3,41 +3,72 @@ Domain entities — the "Model" of Model-Service-Repository.
 
 These are the objects services reason about and repositories persist. They are
 deliberately independent of both HTTP (no FastAPI import) and storage (no ORM,
-no driver), so the same entity can serve the REST API and any other frontend.
-
-``Item`` is a placeholder — replace it with the real aggregate.
+no driver), so the same entity can serve the REST API and the Telegram bot.
 """
 
 from datetime import datetime
-from uuid import UUID
+from typing import Literal, Optional
 
 from pydantic import (
-    BaseModel, 
-    ConfigDict, 
-    Field
+    BaseModel,
+    ConfigDict,
+    Field,
 )
-from typing import Optional
 
 from src.utils import utc_now
 
 
-class Item(BaseModel):
-    """
-    Example aggregate root.
-
-    Frozen: entities are replaced, never mutated in place, which keeps the
-    repository the only component that decides when state changes.
-    """
+class DocumentChunk(BaseModel):
+    """A fragment of one knowledge-base document, the retrieval unit."""
 
     model_config = ConfigDict(frozen=True)
 
-    id: UUID
-    name: str = Field(min_length=1, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=2000)
-    is_active: bool = True
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    id: int
+    source: str
+    heading: Optional[str] = None
+    text: str = Field(min_length=1)
 
-    def deactivate(self) -> "Item":
-        """Domain behaviour lives on the entity, not in the service."""
-        return self.model_copy(update={"is_active": False, "updated_at": utc_now()})
+
+class RetrievedChunk(BaseModel):
+    """A chunk together with its similarity to the query."""
+
+    model_config = ConfigDict(frozen=True)
+
+    chunk: DocumentChunk
+    score: float
+
+
+class ChatMessage(BaseModel):
+    """One turn of a dialog, kept for context and escalation dumps."""
+
+    model_config = ConfigDict(frozen=True)
+
+    role: Literal["user", "assistant"]
+    text: str
+    at: datetime = Field(default_factory=utc_now)
+
+    def as_line(self) -> str:
+        return f"{self.role}: {self.text}"
+
+
+class Employee(BaseModel):
+    """What the external HR system knows about a user."""
+
+    model_config = ConfigDict(frozen=True)
+
+    user_id: str
+    full_name: str
+    grade: int = Field(ge=1)
+    vacation_balance_days: int = Field(ge=0)
+
+
+class AssistantReply(BaseModel):
+    """The agent's final verdict for one incoming message."""
+
+    model_config = ConfigDict(frozen=True)
+
+    text: str
+    route: Literal["knowledge_base", "escalate", "degraded"]
+    escalated: bool = False
+    escalation_reason: Optional[str] = None
+    sources: list[str] = Field(default_factory=list)

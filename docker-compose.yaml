@@ -20,6 +20,17 @@ services:
       - "${API_PORT:-8000}:8000"
     volumes:
       - ./src:/app/src:ro
+      # Live-editable corpus; the image carries a copy as fallback.
+      - ./data:/app/data:ro
+      # The ~14 GB embedding model survives container rebuilds here.
+      - hf-cache:/home/app/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     command:
       - uvicorn
       - src.main:app
@@ -38,3 +49,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  hf-cache:

@@ -1,8 +1,8 @@
+from src.services.assistant_service import AssistantService
 from src.services.health import HealthService
-from src.services.item_service import ItemService
 
 
 __all__ = [
-    "HealthService", 
-    "ItemService"
+    "AssistantService",
+    "HealthService",
 ]

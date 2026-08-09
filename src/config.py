@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "app"
+    app_name: str = "hr-it-assistant"
     environment: Literal["local", "dev", "prod"] = "local"
     debug: bool = False
 
@@ -31,6 +31,28 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     gemini_api_key: str = Field(default="", repr=False)
+    gemini_model: str = "gemini-3.5-flash"
+
+    telegram_bot_api_key: str = Field(default="", repr=False)
+    telegram_webhook_secret: str = Field(default="", repr=False)
+    telegram_webhook_url: str = ""
+
+    hf_token: str = Field(default="", repr=False)
+    embedding_model_name: str = "ai-sage/Giga-Embeddings-instruct"
+    embedding_device: str = "auto"
+    embedding_batch_size: int = 8
+
+    # Tests disable this: the warm-up loads the 3B embedding model.
+    warmup_on_startup: bool = True
+
+    data_dir: Path = BASE_DIR / "data"
+    retrieval_top_k: int = 4
+    # Calibrated on the real corpus: legit questions score >= 0.58, off-topic
+    # and injection attempts <= 0.44 (Giga-Embeddings, cosine).
+    min_retrieval_score: float = 0.5
+    min_route_confidence: float = 0.6
+    restricted_sources: list[str] = ["salary_and_grades.md", "employee_directory.md"]
+    history_max_turns: int = 10
 
 
 @lru_cache

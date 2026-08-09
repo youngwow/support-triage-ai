@@ -1,14 +1,8 @@
-from datetime import datetime
-from typing import (
-    Literal, 
-    Self,
-    Optional
-)
-from uuid import UUID
+from typing import Literal, Optional, Self
 
 from pydantic import BaseModel, Field
 
-from src.models.domain import Item
+from src.models.domain import AssistantReply
 
 
 class HealthResponse(BaseModel):
@@ -19,32 +13,29 @@ class HealthResponse(BaseModel):
     checks: dict[str, str] = Field(default_factory=dict)
 
 
-class ItemResponse(BaseModel):
-    id: UUID
-    name: str
-    description: Optional[str]
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
+class ChatResponse(BaseModel):
+    reply: str
+    route: Literal["knowledge_base", "escalate", "degraded"]
+    escalated: bool
+    escalation_reason: Optional[str]
+    sources: list[str]
 
     @classmethod
-    def from_domain(cls, item: Item) -> Self:
+    def from_domain(cls, reply: AssistantReply) -> Self:
         """Single place where a domain entity becomes wire format."""
         return cls(
-            id=item.id,
-            name=item.name,
-            description=item.description,
-            is_active=item.is_active,
-            created_at=item.created_at,
-            updated_at=item.updated_at,
+            reply=reply.text,
+            route=reply.route,
+            escalated=reply.escalated,
+            escalation_reason=reply.escalation_reason,
+            sources=reply.sources,
         )
 
 
-class ItemListResponse(BaseModel):
-    items: list[ItemResponse]
-    total: int
-    limit: int
-    offset: int
+class WebhookAck(BaseModel):
+    """Telegram only needs a fast 200 — processing happens in the background."""
+
+    ok: bool = True
 
 
 class ErrorResponse(BaseModel):

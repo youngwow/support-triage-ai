@@ -1,23 +1,17 @@
 from typing import Optional
+
 from pydantic import (
-    BaseModel, 
-    ConfigDict, 
-    Field
+    BaseModel,
+    ConfigDict,
+    Field,
 )
 
 
-class ItemCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str = Field(min_length=1, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=2000)
-
-
-class ItemUpdateRequest(BaseModel):
-    """Partial update — only the provided fields are applied."""
+class ChatRequest(BaseModel):
+    """A single user message addressed to the assistant."""
 
     model_config = ConfigDict(extra="forbid")
 
-    name: Optional[str]= Field(default=None, min_length=1, max_length=200)
-    description: Optional[str]= Field(default=None, max_length=2000)
-    is_active: Optional[bool] = None
+    chat_id: str = Field(min_length=1, max_length=64)
+    user_id: Optional[str] = Field(default=None, max_length=64)
+    text: str = Field(min_length=1, max_length=4000)

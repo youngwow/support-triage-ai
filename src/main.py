@@ -8,7 +8,12 @@ from fastapi.responses import JSONResponse
 from src import __version__
 from src.api import api_router
 from src.config import Settings, get_settings
-from src.dependencies import get_item_repository
+from src.dependencies import (
+    get_bot,
+    get_dialog_memory,
+    get_hr_system,
+    get_knowledge_base,
+)
 from src.exceptions import AppError
 from src.models.responses import ErrorResponse
 from src.utils import configure_logging, get_logger
@@ -22,11 +27,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Warm dependencies before the first request, release them on shutdown."""
     settings: Settings = get_settings()
     logger.info(f"Starting {settings.app_name} ({settings.environment})")
-    item_repository = get_item_repository()
-    await item_repository.load()
+
+    if settings.warmup_on_startup:
+        await get_knowledge_base().load()
+        await get_hr_system().load()
+        await get_dialog_memory().load()
+
+    bot = get_bot()
+    if bot is not None and settings.telegram_webhook_url:
+        webhook_url = (
+            settings.telegram_webhook_url.rstrip("/")
+            + settings.api_prefix
+            + "/telegram/webhook"
+        )
+        await bot.set_webhook(
+            webhook_url,
+            secret_token=settings.telegram_webhook_secret or None,
+            drop_pending_updates=True,
+        )
+        logger.info(f"Telegram webhook registered at {webhook_url}")
 
     yield
 
+    if bot is not None:
+        await bot.session.close()
     logger.info("Shutdown complete")
 
 
