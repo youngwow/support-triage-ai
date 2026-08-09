@@ -3,13 +3,11 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    Depends,
     Path,
     Query,
     status
 )
 
-from src.services.item_service import ItemService
 from src.models.requests import (
     ItemCreateRequest,
     ItemUpdateRequest
@@ -18,7 +16,7 @@ from src.models.responses import (
     ItemListResponse,
     ItemResponse
 )
-from src.dependencies import get_item_service
+from src.dependencies import ItemServiceDep
 
 
 router = APIRouter(
@@ -35,9 +33,9 @@ ItemId = Annotated[UUID, Path(description="Item identifier")]
     summary="List items"
 )
 async def list_items(
+    service: ItemServiceDep,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    service: ItemService = Depends(get_item_service),
 ) -> ItemListResponse:
     items, total = await service.list_items(limit=limit, offset=offset)
     return ItemListResponse(
@@ -55,7 +53,7 @@ async def list_items(
 )
 async def get_item(
     item_id: ItemId,
-    service: ItemService = Depends(get_item_service),
+    service: ItemServiceDep,
 ) -> ItemResponse:
     item = await service.get_item(item_id)
     return ItemResponse.from_domain(item)
@@ -69,7 +67,7 @@ async def get_item(
 )
 async def create_item(
     payload: ItemCreateRequest,
-    service: ItemService = Depends(get_item_service),
+    service: ItemServiceDep,
 ) -> ItemResponse:
     item = await service.create_item(payload)
     return ItemResponse.from_domain(item)
@@ -83,7 +81,7 @@ async def create_item(
 async def update_item(
     item_id: ItemId,
     payload: ItemUpdateRequest,
-    service: ItemService = Depends(get_item_service),
+    service: ItemServiceDep,
 ) -> ItemResponse:
     item = await service.update_item(item_id, payload)
     return ItemResponse.from_domain(item)
@@ -96,6 +94,6 @@ async def update_item(
 )
 async def delete_item(
     item_id: ItemId,
-    service: ItemService = Depends(get_item_service),
+    service: ItemServiceDep,
 ) -> None:
     await service.delete_item(item_id)

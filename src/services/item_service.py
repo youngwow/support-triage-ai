@@ -65,11 +65,14 @@ class ItemService:
         current = await self.get_item(item_id)
 
         changes = payload.model_dump(exclude_unset=True)
+
+        for field in ("name", "is_active"):
+            if changes.get(field) is None:
+                changes.pop(field, None)
+
         if not changes:
             raise InvalidRequestError("Update request must contain at least one field")
 
-        if changes.get("name") is None:
-            changes.pop("name", None)
         changes["updated_at"] = utc_now()
 
         candidate = Item.model_validate(current.model_dump() | changes)

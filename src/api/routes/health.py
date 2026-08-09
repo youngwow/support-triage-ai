@@ -1,13 +1,11 @@
 from fastapi import (
-    APIRouter, 
+    APIRouter,
     Response,
-    Depends, 
     status
 )
 
-from src.services import HealthService
 from src.models.responses import HealthResponse
-from src.dependencies import get_health_service
+from src.dependencies import HealthServiceDep
 
 
 router = APIRouter(
@@ -21,9 +19,7 @@ router = APIRouter(
     response_model=HealthResponse, 
     summary="Liveness probe"
 )
-async def liveness(
-    service: HealthService = Depends(get_health_service)
-) -> HealthResponse:
+async def liveness(service: HealthServiceDep) -> HealthResponse:
     return service.liveness()
 
 
@@ -34,7 +30,7 @@ async def liveness(
 )
 async def readiness(
     response: Response,
-    service: HealthService = Depends(get_health_service)
+    service: HealthServiceDep,
 ) -> HealthResponse:
     """
     Full check: every downstream dependency answers.

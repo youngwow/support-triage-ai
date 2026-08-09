@@ -15,9 +15,17 @@ def get_item_repository() -> AbstractRepository:
     return InMemoryRepository()
 
 
-def get_item_service(repository: AbstractRepository = Depends(get_item_repository)) -> ItemService:
+SettingsDep = Annotated[Settings, Depends(get_settings)]
+ItemRepositoryDep = Annotated[AbstractRepository, Depends(get_item_repository)]
+
+
+def get_item_service(repository: ItemRepositoryDep) -> ItemService:
     return ItemService(repository)
 
 
-def get_health_service(settings: Settings = Depends(get_settings), repository: ItemRepositoryDep) -> HealthService:
+def get_health_service(settings: SettingsDep, repository: ItemRepositoryDep) -> HealthService:
     return HealthService(settings, repository)
+
+
+ItemServiceDep = Annotated[ItemService, Depends(get_item_service)]
+HealthServiceDep = Annotated[HealthService, Depends(get_health_service)]
