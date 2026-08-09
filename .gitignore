@@ -1,6 +1,7 @@
 data/
 .claude/
 CLAUDE.md
+CLAUDE.MD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
