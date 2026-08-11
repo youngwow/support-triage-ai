@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Coursework for the AITH "System Design" assignment (see `README.md`, in Russian). The FastAPI app under `src/` is a **template**: `Item` is a placeholder aggregate meant to be replaced by the real domain. The declared dependencies (torch, transformers, faiss, langchain/langgraph, google-genai, aiogram) are the intended stack for the actual NLP case and are not yet imported anywhere in `src/`.
+Coursework for the AITH "System Design" assignment. `task_for_ai.md` is the brief (Russian): design an AI/ML system that automates support-ticket handling for a service with ~5M users and ~200k tickets/day, and back the design with a **minimal PoC** — not a production system.
 
-`AI_LOG.md` is a graded deliverable — it records how AI tooling was used, in Russian. Append to it when a session produces a meaningful chunk of the work.
+The deliverables are the prose (`README.md`, `docs/*.md`) as much as the code. The assignment explicitly grades *against* volume: "не писать много кода ради объёма". Prefer deleting to adding.
+
+**Never touch `AI_USAGE.md` or `SELF_REVIEW.md`** — the user writes those personally. **Never make git commits**; the graded commit history is the user's.
 
 ## Commands
 
@@ -14,50 +16,82 @@ Everything runs through **uv**; never invoke bare `pytest`/`python`. Python >= 3
 
 ```bash
 uv sync                                     # install (incl. dev group)
-uv run pytest -q                            # full suite (73 tests, <1s)
-uv run pytest tests/test_items_api.py -q    # one file
-uv run pytest tests/test_items_api.py::test_create_defaults_the_description_to_null
-uv run pytest -k "readiness" -q             # by name
+uv run pytest -q                            # full suite
+uv run pytest tests/ml -q                   # one directory
+uv run pytest -k "pii" -q                   # by name
 uv run pytest -m "not slow" -q              # by marker
+RUN_INTEGRATION=1 uv run pytest -m integration -q   # the real-embedder test
+
 uv run python -m src.main                   # dev server (auto-reload when environment=local)
-docker compose up --build                   # containerised, mounts ./src read-only with --reload
+uv run python scripts/demo.py               # end-to-end demo against a running instance
+uv run python scripts/evaluate.py           # rules baseline on the golden set
+uv run python scripts/evaluate.py --llm     # also scores Gemini (30 API calls)
+docker compose up --build                   # containerised; needs a GPU, or set WARMUP_ON_STARTUP=false
 ```
 
 No linter or formatter is configured — don't invent a `ruff`/`black` step.
 
-## Architecture
+## The two paths
 
-Model-Service-Repository. A request flows `src/api/routes/*` → `src/services/*` → `src/repositories/*`, and each layer only knows the one below it.
+This is the whole design, and every file belongs to one of them.
 
-**Wiring lives in `src/dependencies.py`, nowhere else.** It exports `Annotated` type aliases (`SettingsDep`, `ItemRepositoryDep`, `ItemServiceDep`, `HealthServiceDep`); routes declare `service: ItemServiceDep` and never write `Depends(...)` inline or construct a service themselves. New service → add its provider and alias there.
+**Triage — synchronous, `POST /api/v1/tickets`.** `src/services/triage_service.py`: mask PII → deterministic rules → LLM classification → risk → route → store → audit → enqueue. Order is load-bearing:
 
-**Errors are raised, not returned.** Services raise `AppError` subclasses from `src/exceptions.py`, each carrying its own `status_code` and machine-readable `code`. The single handler registered in `create_app()` turns any of them into an `ErrorResponse` body. Routes contain no `try`/`except` and no `HTTPException` — a new failure mode means a new `AppError` subclass.
+1. **PII is masked first** (`src/ml/pii.py`). Everything downstream — the stored ticket, the classifier prompt, the audit record — sees masked text only, so "no personal data reaches the external LLM" holds by construction rather than by discipline. The patterns are anchored so an order number survives; `tests/ml/test_pii.py` pins that.
+2. **Rules run before the model** (`src/ml/rules.py`) and set a risk *floor*. Risk is combined with `max_risk()`, so a model can never talk the system out of a rule that fired. Rules also screen for prompt injection; a flagged ticket never reaches the provider.
+3. **Classification is an LLM call** (`src/ml/classifier.py`). `LLMUnavailableError` is caught and `RuleTopicClassifier` takes over, with confidence capped below `min_topic_confidence` so a degraded decision can never be auto-sent.
 
-**Models are split by direction, not by entity:**
-- `models/domain.py` — frozen Pydantic entities, no FastAPI and no storage imports. Domain behaviour lives here as methods returning new instances (`Item.deactivate()`), not in services.
-- `models/requests.py` — inbound, all `extra="forbid"` so a typo'd field is a 422 rather than a silent no-op.
-- `models/responses.py` — outbound. `ItemResponse.from_domain()` is the *only* place a domain entity becomes wire format.
+**Draft — asynchronous.** A bounded `asyncio.Queue` (`src/repositories/draft_queue.py`) feeds one worker started in the lifespan. `src/agent/graph.py` is a 3-node LangGraph: `retrieve` → `generate` → `END | escalate`. One generation call per ticket is the cost ceiling — groundedness and confidence come back in the *same* structured call as the answer, not a second one. `senior_escalation` tickets are never enqueued, so risky tickets cost nothing to generate.
 
-**Repositories** implement the async `AbstractRepository` contract. Two hooks matter beyond CRUD: `load()` is an optional warm-up awaited once from the app lifespan, and `ping()` backs the readiness probe. Swapping the in-memory store for a real one means adding an implementation and changing `get_item_repository()` — nothing else. The repository signals "duplicate id" with a bare `KeyError`, which `ItemService.create_item` translates to `EntityAlreadyExistsError`.
+Nothing is ever sent to a user. `auto_send_allowed` means "would have been eligible"; a human is always in the loop.
 
-**Config**: `Settings` in `src/config.py` is the only code allowed to read the environment; reach it via the `lru_cache`d `get_settings()`. `.env` at the repo root is loaded automatically and currently holds `GEMINI_API_KEY`.
+## Deliberate compromises
 
-**App construction**: `create_app()` is a factory; the module-level `app = create_app()` exists only for uvicorn. Tests build their own instance so they never share state through the import system.
+Do not "fix" these without asking — they are documented decisions, and the docs explain them:
 
-**Health**: `/api/v1/health` is liveness (always ok, no I/O). `/api/v1/health/ready` runs the dependency checks and flips the status code to 503 while keeping the same `HealthResponse` body, so an orchestrator gets both the signal and the reason.
+- **The <500 ms triage budget is not met.** An LLM call is ~2.3 s. Measured, reported through `GET /api/v1/metrics` (`over_budget`, `over_budget_ratio`), and the distillation path is described in `docs/ml.md`. The `TopicClassifier` Protocol is the seam a distilled model slots into.
+- **The queue is not durable.** Restarting loses whatever is in it; the lifespan logs how many. RabbitMQ is the named production replacement.
+- **Everything is in-memory** — tickets, audit log, FAISS index.
+
+## Conventions
+
+**Wiring lives in `src/dependencies.py`, nowhere else.** It exports `Annotated` aliases (`TriageServiceDep`, `KnowledgeBaseDep`, …); routes declare `service: TriageServiceDep` and never write `Depends(...)` inline. Two tiers: `@lru_cache` singletons for anything holding state, plain functions for per-request services. **Every new cached provider must be added to `_CACHED_PROVIDERS` in `tests/conftest.py`** or state leaks between tests.
+
+**Errors are raised, not returned.** Services raise `AppError` subclasses from `src/exceptions.py`, each carrying its own `status_code` and machine-readable `code`. One handler in `create_app()` renders them. Routes contain no `try`/`except` and no `HTTPException`. `LLMUnavailableError` and `KnowledgeBaseUnavailableError` are *routes*, not failures: callers catch them and degrade.
+
+**`get_llm_client()` returns `NullLLMClient` when no key is set**, because `genai.Client(api_key="")` raises at construction. This is what makes the whole PoC runnable with no credentials — the degraded path is the default local experience.
+
+**Models are split by direction:** `models/domain.py` (frozen entities, no FastAPI, no storage; behaviour lives here as methods returning new instances), `models/requests.py` (`extra="forbid"`), `models/responses.py` (`TicketResponse.from_domain()` is the *only* place a domain entity becomes wire format).
+
+**Metrics are a projection, not counters.** `MetricsService` recomputes everything from the audit log, so a dashboard number can always be traced to the records behind it.
+
+**Readiness is deliberately tolerant.** Only `CRITICAL_PROBES = ("tickets", "audit")` flip `/health/ready` to 503. A missing API key or an unloaded index is reported but does not pull the instance out of the load balancer — the service still triages without them.
+
+**Config**: `Settings` in `src/config.py` is the only code allowed to read the environment; reach it via the `lru_cache`d `get_settings()`.
 
 ## Testing
 
-`get_settings` and `get_item_repository` are `lru_cache`d singletons, so `tests/conftest.py` has an autouse fixture clearing both around every test. Without it the in-memory store leaks rows between tests and the suite becomes order-dependent — keep that invariant when adding cached providers.
+`tests/conftest.py` has two autouse fixtures: `_reset_singletons` clears every cached provider, and `_fast_lifespan` sets `WARMUP_ON_STARTUP=false`, `DRAFT_WORKER_ENABLED=false` and blanks `GEMINI_API_KEY`. So tests never load the 3B embedding model, never start the worker, and never reach the network. Draft tests call `await draft_service.process_next()` explicitly instead of racing a background task.
 
-Fixtures already available: `app`, `client` (sync `TestClient`, **runs the lifespan**), `async_client` (ASGITransport, **does not** run the lifespan — use `client` if the test needs anything lifespan sets up), `item_repository` (the same instance the app resolves — seed through it rather than driving the API to build preconditions).
+Fixtures: `app`, `client` (sync `TestClient`, **runs the lifespan**), `async_client` (ASGITransport, **does not**), `fake_embedder` (numpy bag-of-stems, keeps a bias axis so no vector normalises to NaN), `ticket_repository`, `audit_log`, `draft_queue`.
 
-Settings enforced by `pyproject.toml` that change how tests must be written:
-- `asyncio_mode = "auto"` — write plain `async def test_...`, no `@pytest.mark.asyncio`.
-- `filterwarnings = ["error"]` — any warning fails the run. Fix the cause; don't add an ignore.
-- `--strict-markers` — only `slow` and `integration` are registered; register a new one before using it.
-- `pythonpath = ["."]` — `src` is not an installed package, so imports are `from src...`.
+Injection style: `app.dependency_overrides` (cleared in teardown) at the HTTP layer only; hand-written recording fakes via the constructor everywhere below. No mock library.
 
-Use **`httpx2`**, not `httpx`: Starlette deprecates `httpx` for `TestClient`, and a DeprecationWarning is a failure here.
+Settings from `pyproject.toml` that change how tests must be written:
+- `asyncio_mode = "auto"` — plain `async def test_...`, no `@pytest.mark.asyncio`.
+- `filterwarnings = ["error"]` — any warning fails. The two ignores are import-time Python-3.14 deprecations in google-genai/langsmith; don't add more without a reason in the comment.
+- `--strict-markers` — only `slow` and `integration` are registered.
+- `pythonpath = ["."]` — imports are `from src...`.
 
-A `test-writer` subagent is configured in `.claude/agents/` for adding or repairing tests. Note `.claude/` and `data/` are gitignored.
+Use **`httpx2`**, not `httpx`, for test clients (Starlette deprecates `httpx` for `TestClient`, and a DeprecationWarning is a failure). Note `src/agent/llm.py` imports plain `httpx` for its retry predicate — that is correct.
+
+`transformers` is pinned `>=4.56,<5`: Giga-Embeddings' `trust_remote_code` is written against 4.x, and `dtype=` in `from_pretrained` needs >= 4.56.
+
+## Subagents
+
+`.claude/agents/` holds two, both worth using rather than doing the work inline:
+
+- **`test-writer`** — adds or repairs pytest tests. Give it the target and the behaviours to pin.
+- **`docs-writer`** — the *only* thing that writes `docs/*.md` and `README.md`. It is restricted to those files and to the scope in each document's `## Что должно быть:` block, which is the assignment's checklist and must not be deleted.
+
+`.claude/` and the HF cache are gitignored; `data/` is committed and ships in the image.

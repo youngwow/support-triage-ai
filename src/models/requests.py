@@ -1,23 +1,22 @@
 from typing import Optional
-from pydantic import (
-    BaseModel, 
-    ConfigDict, 
-    Field
-)
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from src.models.domain import Channel
 
 
-class ItemCreateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class TicketCreateRequest(BaseModel):
+    """An incoming support request, whatever channel it arrived through.
 
-    name: str = Field(min_length=1, max_length=200)
-    description: Optional[str] = Field(default=None, max_length=2000)
-
-
-class ItemUpdateRequest(BaseModel):
-    """Partial update — only the provided fields are applied."""
+    ``extra="forbid"`` so a misspelled field is a 422 rather than a field that
+    silently does nothing.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    name: Optional[str]= Field(default=None, min_length=1, max_length=200)
-    description: Optional[str]= Field(default=None, max_length=2000)
-    is_active: Optional[bool] = None
+    channel: Channel
+    text: str = Field(min_length=1, max_length=8000)
+    #: Channel-side identifier (message id, mail id). Supplying it makes the
+    #: POST idempotent: retrying a delivery returns the existing ticket instead
+    #: of triaging and paying for it twice.
+    external_id: Optional[str] = Field(default=None, min_length=1, max_length=128)

@@ -16,10 +16,27 @@ services:
     environment:
       ENVIRONMENT: local
       LOG_LEVEL: INFO
+      # Set to "false" to skip loading the 3B embedding model. The triage path
+      # is fully functional without it; only draft generation degrades.
+      WARMUP_ON_STARTUP: "${WARMUP_ON_STARTUP:-true}"
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
       - ./src:/app/src:ro
+      # Live-editable knowledge base and ticket fixtures; the image carries a
+      # copy as fallback.
+      - ./data:/app/data:ro
+      # The ~14 GB embedding model survives container rebuilds here.
+      - hf-cache:/home/app/.cache/huggingface
+    # The embedding model wants a GPU. Drop this block (or set
+    # WARMUP_ON_STARTUP=false) to run on a CPU-only host.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     command:
       - uvicorn
       - src.main:app
@@ -38,3 +55,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  hf-cache:

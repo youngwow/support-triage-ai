@@ -17,7 +17,6 @@
 # Secrets and local state
 .env
 .envrc
-data/
 
 # Not needed to run the service
 .claude/

@@ -1,8 +1,18 @@
-from src.repositories.in_memory_repository import InMemoryRepository
-from src.repositories.repository_interface import AbstractRepository
+from src.repositories.audit_log import AbstractAuditLog, InMemoryAuditLog
+from src.repositories.draft_queue import DraftQueue
+from src.repositories.knowledge_base import AbstractKnowledgeBase, FaissKnowledgeBase
+from src.repositories.ticket_repository import (
+    AbstractTicketRepository,
+    InMemoryTicketRepository,
+)
 
 
 __all__ = [
-    "AbstractRepository", 
-    "InMemoryRepository"
+    "AbstractAuditLog",
+    "AbstractKnowledgeBase",
+    "AbstractTicketRepository",
+    "DraftQueue",
+    "FaissKnowledgeBase",
+    "InMemoryAuditLog",
+    "InMemoryTicketRepository",
 ]

@@ -1,0 +1,37 @@
+[
+  {"id": "G-001", "text": "Подскажите, как поменять способ оплаты в личном кабинете?", "category": "billing/faq", "risk": "low"},
+  {"id": "G-002", "text": "Где посмотреть, когда спишется следующий платёж за подписку?", "category": "billing/faq", "risk": "low"},
+  {"id": "G-003", "text": "Можно ли привязать несколько карт к одному аккаунту?", "category": "billing/faq", "risk": "low"},
+  {"id": "G-004", "text": "Как отключить автопродление премиум-подписки?", "category": "billing/faq", "risk": "low"},
+  {"id": "G-005", "text": "Здравствуйте! Расскажите, чем отличаются тарифы подписки.", "category": "billing/faq", "risk": "low"},
+
+  {"id": "G-006", "text": "Оплатил подписку час назад, деньги списались, а премиум так и не активировался.", "category": "billing/payment_issue", "risk": "low"},
+  {"id": "G-007", "text": "Купил доступ вчера, статус заказа до сих пор «в обработке».", "category": "billing/payment_issue", "risk": "low"},
+  {"id": "G-008", "text": "Платёж висит в обработке уже второй день, что делать?", "category": "billing/payment_issue", "risk": "low"},
+  {"id": "G-009", "text": "С карты списали, но подписка не активна. Номер заказа 88214.", "category": "billing/payment_issue", "risk": "low"},
+  {"id": "G-010", "text": "Оплата не проходит, хотя банк подтверждает, что с картой всё в порядке.", "category": "billing/payment_issue", "risk": "low"},
+
+  {"id": "G-011", "text": "Верните мне деньги за подписку, я её вообще не заказывал!", "category": "billing/refund", "risk": "high"},
+  {"id": "G-012", "text": "С меня дважды списали за один и тот же месяц, требую возврат средств.", "category": "billing/refund", "risk": "high"},
+  {"id": "G-013", "text": "Хочу оформить возврат денег за неиспользованный период подписки.", "category": "billing/refund", "risk": "high"},
+  {"id": "G-014", "text": "Если не вернёте деньги, я напишу жалобу в Роспотребнадзор.", "category": "billing/refund", "risk": "high"},
+  {"id": "G-015", "text": "Оспариваю списание от третьего числа, сумма не соответствует тарифу.", "category": "billing/refund", "risk": "high"},
+
+  {"id": "G-016", "text": "Не могу войти в аккаунт, забыл пароль и потерял доступ к почте.", "category": "account_recovery", "risk": "medium"},
+  {"id": "G-017", "text": "Помогите восстановить доступ, постоянно пишет «неверный пароль».", "category": "account_recovery", "risk": "medium"},
+  {"id": "G-018", "text": "Кажется, мой аккаунт взломали — из него рассылают спам знакомым.", "category": "account_recovery", "risk": "high"},
+  {"id": "G-019", "text": "Хочу сменить привязанный email, доступа к старому уже нет.", "category": "account_recovery", "risk": "medium"},
+  {"id": "G-020", "text": "Сбросьте, пожалуйста, пароль — письмо для восстановления не приходит.", "category": "account_recovery", "risk": "medium"},
+
+  {"id": "G-021", "text": "Сайт выдаёт ошибку 500 при оформлении заказа.", "category": "technical_issue", "risk": "low"},
+  {"id": "G-022", "text": "Приложение вылетает при открытии раздела «Мои покупки».", "category": "technical_issue", "risk": "low"},
+  {"id": "G-023", "text": "Страница корзины не загружается уже полчаса.", "category": "technical_issue", "risk": "low"},
+  {"id": "G-024", "text": "При попытке зайти пишет 502 bad gateway.", "category": "technical_issue", "risk": "low"},
+  {"id": "G-025", "text": "Видео не воспроизводится, крутится бесконечная загрузка.", "category": "technical_issue", "risk": "low"},
+
+  {"id": "G-026", "text": "Здравствуйте, а вы принимаете на работу? Куда отправить резюме?", "category": "other", "risk": "low"},
+  {"id": "G-027", "text": "Просто хотел сказать спасибо, отличный сервис!", "category": "other", "risk": "low"},
+  {"id": "G-028", "text": "Предлагаем разместить нашу рекламу на вашем сайте, к кому обратиться?", "category": "other", "risk": "low"},
+  {"id": "G-029", "text": "Как связаться с вашим отделом по работе с партнёрами?", "category": "other", "risk": "low"},
+  {"id": "G-030", "text": "Кажется, вы ошиблись адресом — это письмо предназначалось не мне.", "category": "other", "risk": "low"}
+]

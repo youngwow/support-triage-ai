@@ -19,13 +19,6 @@ class EntityNotFoundError(AppError):
     code = "not_found"
 
 
-class EntityAlreadyExistsError(AppError):
-    """An entity with the same identity already exists."""
-
-    status_code = 409
-    code = "already_exists"
-
-
 class InvalidRequestError(AppError):
     """The request is well-formed but violates a business rule."""
 
@@ -38,3 +31,22 @@ class RepositoryUnavailableError(AppError):
 
     status_code = 503
     code = "repository_unavailable"
+
+
+class LLMUnavailableError(AppError):
+    """The external LLM API is unreachable or returned an unusable answer.
+
+    Never surfaced to a user as a failure: the triage path catches it and falls
+    back to the rule classifier, and the draft path catches it and routes the
+    ticket to an operator.
+    """
+
+    status_code = 503
+    code = "llm_unavailable"
+
+
+class KnowledgeBaseUnavailableError(AppError):
+    """The vector index is not loaded, so retrieval cannot run."""
+
+    status_code = 503
+    code = "knowledge_base_unavailable"

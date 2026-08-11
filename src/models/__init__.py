@@ -1,19 +1,52 @@
-from src.models.domain import Item
-from src.models.requests import ItemCreateRequest, ItemUpdateRequest
+from src.models.domain import (
+    AuditRecord,
+    Category,
+    Channel,
+    DocumentChunk,
+    DraftAnswer,
+    RetrievedChunk,
+    RiskLevel,
+    Route,
+    Ticket,
+    TicketStatus,
+    TriageDecision,
+    max_risk,
+)
+from src.models.requests import TicketCreateRequest
 from src.models.responses import (
+    AuditRecordResponse,
+    AuditResponse,
+    DraftResponse,
     ErrorResponse,
     HealthResponse,
-    ItemListResponse,
-    ItemResponse,
+    LatencyStats,
+    MetricsResponse,
+    TicketResponse,
+    TriageResponse,
 )
 
 
 __all__ = [
+    "AuditRecord",
+    "AuditRecordResponse",
+    "AuditResponse",
+    "Category",
+    "Channel",
+    "DocumentChunk",
+    "DraftAnswer",
+    "DraftResponse",
     "ErrorResponse",
     "HealthResponse",
-    "Item",
-    "ItemCreateRequest",
-    "ItemListResponse",
-    "ItemResponse",
-    "ItemUpdateRequest",
+    "LatencyStats",
+    "MetricsResponse",
+    "RetrievedChunk",
+    "RiskLevel",
+    "Route",
+    "Ticket",
+    "TicketCreateRequest",
+    "TicketResponse",
+    "TicketStatus",
+    "TriageDecision",
+    "TriageResponse",
+    "max_risk",
 ]
