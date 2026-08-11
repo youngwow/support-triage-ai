@@ -31,3 +31,25 @@
 ```
 /plan Read @task_for_ai.md and execute it. Always use context7 before writing any code and use test-writer subagent (`test-writer`) for writing tests. Use another subagent (`docs-writer`) for writing documentation. Do not make commits; I am the only one who has the right to make commits. Also, do not modify the AI_USAGE.md и SELF_REVIEW.md files; I am the only one who has the right to change this files. Also, check out the `preparing_case_nlp` branch via git; you can take this example as a base (for instance, use the same tech stack).
 ```
+
+4. В это время генерация mock-тикетов и базы знаний для демострации use cases через Gemini (Chat):
+```
+Сгененрируй несколько файлов для этой RAG-системы и для use cases: похожие тикеты и базу знаний
+```
+
+5. Ответ на вопросы /plan mode для Claude Code:
+```
+Review your answers
+
+ ● Where should the new ticket-triage PoC be built? `preparing_case_nlp` is a different
+   case (HR assistant) and does not contain docs/, task_for_ai.md, AI_USAGE.md or
+   SELF_REVIEW.md — those exist only on dev.
+   → Stay on dev, port from branch (Recommended)
+ ● What backs the FAISS retrieval in the PoC? The prior branch used a 3B / ~14 GB
+   Giga-Embeddings model, which makes `docker compose up` slow to verify.
+   → Use Giga-Embeddings
+ ● task_for_ai.md requires README.md to be written by a subagent, but the docs-writer
+   you just had me create is hard-restricted to the docs/ directory.
+   → Extend docs-writer to README.md (Recommended)
+```
+
