@@ -1,7 +1,7 @@
 [project]
-name = "ai-talent-hub-task-system-design"
+name = "support-triage-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "Классификация, оценка риска и маршрутизация обращений в поддержку + черновик ответа по базе знаний. Python 3.14, FastAPI, LangGraph, Gemini, LLM, FAISS (RAG)"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
